@@ -272,9 +272,11 @@ export default function AdminAddPropertyPage() {
         setForm({
           id: String(property.id ?? editId),
           title: String(property.title ?? ""),
+
           propertyType:
             (property.propertyType ??
               "APARTMENT") as PropertyType,
+
           listingType:
             (property.listingType ??
               "SALE") as ListingType,
@@ -298,9 +300,11 @@ export default function AdminAddPropertyPage() {
           description: String(property.description ?? ""),
 
           images: images.join(", "),
+
           documents: Array.isArray(property.documents)
             ? property.documents.join(", ")
             : String(property.documents ?? ""),
+
           amenities: Array.isArray(property.amenities)
             ? property.amenities.join(", ")
             : String(property.amenities ?? ""),
@@ -313,6 +317,7 @@ export default function AdminAddPropertyPage() {
         });
 
         setSelectedImage(firstImage);
+
         setSelectedImageName(
           firstImage ? "Current property image" : ""
         );
@@ -497,26 +502,38 @@ export default function AdminAddPropertyPage() {
         const updates: Partial<Property> = {
           ownerId: form.ownerId,
           ownerName: form.ownerName,
+
           agentId: form.agentId,
           agentName: form.agentName,
+
           title: form.title.trim(),
           description: form.description.trim(),
+
           propertyType: form.propertyType,
           listingType: form.listingType,
+
           price: Number(form.price),
+
           location: form.location.trim(),
           city: form.city.trim(),
           state: form.state.trim(),
           pincode: form.pincode.trim(),
+
           bedrooms: Number(form.bedrooms) || 0,
           bathrooms: Number(form.bathrooms) || 0,
+
           area: Number(form.area),
+
           amenities: amenityList,
           images: imageList,
           documents: documentList,
+
           availability: form.availability,
+
           listedDate: form.listedDate
-            ? new Date(form.listedDate).toISOString()
+            ? new Date(
+                form.listedDate
+              ).toISOString()
             : undefined,
         };
 
@@ -623,9 +640,12 @@ export default function AdminAddPropertyPage() {
 
       setForm({
         id: "",
+
         title: "",
+
         propertyType:
           "APARTMENT" as PropertyType,
+
         listingType:
           "SALE" as ListingType,
 
@@ -734,6 +754,7 @@ export default function AdminAddPropertyPage() {
           <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+
               <p className="mt-4 text-sm text-slate-500">
                 Loading property...
               </p>
@@ -767,10 +788,7 @@ export default function AdminAddPropertyPage() {
                   label="Property ID"
                   value={form.id}
                   onChange={(value) =>
-                    updateField(
-                      "id",
-                      value
-                    )
+                    updateField("id", value)
                   }
                   placeholder="Leave empty for automatic UUID"
                   className={inputClass}
@@ -780,10 +798,7 @@ export default function AdminAddPropertyPage() {
                   label="Property Title"
                   value={form.title}
                   onChange={(value) =>
-                    updateField(
-                      "title",
-                      value
-                    )
+                    updateField("title", value)
                   }
                   placeholder="Premium 3 BHK Apartment"
                   required
@@ -939,10 +954,7 @@ export default function AdminAddPropertyPage() {
                   type="number"
                   value={form.price}
                   onChange={(value) =>
-                    updateField(
-                      "price",
-                      value
-                    )
+                    updateField("price", value)
                   }
                   placeholder="7500000"
                   required
@@ -954,10 +966,7 @@ export default function AdminAddPropertyPage() {
                   type="number"
                   value={form.area}
                   onChange={(value) =>
-                    updateField(
-                      "area",
-                      value
-                    )
+                    updateField("area", value)
                   }
                   placeholder="1500"
                   required
@@ -1032,10 +1041,7 @@ export default function AdminAddPropertyPage() {
                   label="City"
                   value={form.city}
                   onChange={(value) =>
-                    updateField(
-                      "city",
-                      value
-                    )
+                    updateField("city", value)
                   }
                   placeholder="Vijayawada"
                   required
@@ -1046,10 +1052,7 @@ export default function AdminAddPropertyPage() {
                   label="State"
                   value={form.state}
                   onChange={(value) =>
-                    updateField(
-                      "state",
-                      value
-                    )
+                    updateField("state", value)
                   }
                   placeholder="Andhra Pradesh"
                   required
@@ -1166,6 +1169,7 @@ export default function AdminAddPropertyPage() {
                             handleImageUpload(
                               event.target.files?.[0]
                             );
+
                             event.currentTarget.value =
                               "";
                           }}
