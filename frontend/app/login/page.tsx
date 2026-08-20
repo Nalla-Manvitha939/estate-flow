@@ -51,7 +51,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        "http://localhost:8000/api/v1/auth/login",
+        "https://estate-flow-bj2z.onrender.com/api/v1/auth/login",
         {
           method: "POST",
           headers: {
