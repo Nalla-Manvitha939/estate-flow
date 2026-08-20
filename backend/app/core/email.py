@@ -1,22 +1,43 @@
 import os
-
-import resend
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 def send_password_reset_email(
     recipient_email: str,
     reset_link: str,
 ):
-    resend_api_key = os.getenv("RESEND_API_KEY")
-    resend_from = os.getenv("RESEND_FROM")
+    smtp_host = os.getenv(
+        "SMTP_HOST",
+        "smtp.gmail.com",
+    )
 
-    if not resend_api_key or not resend_from:
+    smtp_port = int(
+        os.getenv(
+            "SMTP_PORT",
+            "587",
+        )
+    )
+
+    smtp_username = os.getenv("SMTP_USERNAME")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_from = os.getenv(
+        "SMTP_FROM",
+        smtp_username,
+    )
+
+    if not smtp_username or not smtp_password or not smtp_from:
         raise RuntimeError(
-            "Resend configuration is missing. "
-            "Check RESEND_API_KEY and RESEND_FROM."
+            "SMTP configuration is missing. "
+            "Check SMTP_USERNAME, SMTP_PASSWORD and SMTP_FROM."
         )
 
-    resend.api_key = resend_api_key
+    message = MIMEMultipart("alternative")
+
+    message["Subject"] = "EstateFlow - Reset Your Password"
+    message["From"] = smtp_from
+    message["To"] = recipient_email
 
     html_content = f"""
 <!DOCTYPE html>
@@ -112,19 +133,54 @@ def send_password_reset_email(
 </html>
 """
 
-    try:
-        result = resend.Emails.send(
-            {
-                "from": resend_from,
-                "to": [recipient_email],
-                "subject": "EstateFlow - Reset Your Password",
-                "html": html_content,
-            }
+    message.attach(
+        MIMEText(
+            html_content,
+            "html",
         )
+    )
 
-        return result
+    try:
+        with smtplib.SMTP(
+            smtp_host,
+            smtp_port,
+            timeout=30,
+        ) as server:
+
+            server.ehlo()
+
+            server.starttls()
+
+            server.ehlo()
+
+            server.login(
+                smtp_username,
+                smtp_password,
+            )
+
+            server.sendmail(
+                smtp_from,
+                [recipient_email],
+                message.as_string(),
+            )
+
+    except smtplib.SMTPAuthenticationError as exc:
+        raise RuntimeError(
+            "SMTP authentication failed. "
+            "Check SMTP_USERNAME and make sure SMTP_PASSWORD "
+            "is a valid Gmail App Password."
+        ) from exc
+
+    except smtplib.SMTPException as exc:
+        raise RuntimeError(
+            f"Failed to send password reset email: {exc}"
+        ) from exc
 
     except Exception as exc:
         raise RuntimeError(
             f"Failed to send password reset email: {exc}"
         ) from exc
+
+    return {
+        "message": "Password reset email sent successfully"
+    }
