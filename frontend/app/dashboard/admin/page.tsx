@@ -112,7 +112,105 @@ function extractList<T>(data: unknown): T[] {
     return objectData.users as T[];
   }
 
+  if (
+    objectData.data &&
+    typeof objectData.data === "object" &&
+    !Array.isArray(objectData.data)
+  ) {
+    return extractList<T>(objectData.data);
+  }
+
+  if (
+    objectData.result &&
+    typeof objectData.result === "object" &&
+    !Array.isArray(objectData.result)
+  ) {
+    return extractList<T>(objectData.result);
+  }
+
   return [];
+}
+
+function extractTotal(data: unknown): number | null {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const objectData = data as Record<string, unknown>;
+
+  const possibleTotals = [
+    objectData.total,
+    objectData.total_count,
+    objectData.totalCount,
+    objectData.count,
+    objectData.total_items,
+    objectData.totalItems,
+  ];
+
+  for (const value of possibleTotals) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (
+      typeof value === "string" &&
+      value.trim() !== "" &&
+      Number.isFinite(Number(value))
+    ) {
+      return Number(value);
+    }
+  }
+
+  if (
+    objectData.data &&
+    typeof objectData.data === "object" &&
+    !Array.isArray(objectData.data)
+  ) {
+    const nestedTotal = extractTotal(objectData.data);
+
+    if (nestedTotal !== null) {
+      return nestedTotal;
+    }
+  }
+
+  if (
+    objectData.result &&
+    typeof objectData.result === "object" &&
+    !Array.isArray(objectData.result)
+  ) {
+    const nestedTotal = extractTotal(objectData.result);
+
+    if (nestedTotal !== null) {
+      return nestedTotal;
+    }
+  }
+
+  return null;
+}
+
+async function fetchApi(
+  endpoint: string,
+  headers: HeadersInit
+) {
+  const response = await fetch(
+    `${API_BASE_URL}${endpoint}`,
+    {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  let data: unknown = null;
+
+  try {
+    data = await response.json();
+  } catch {}
+
+  return {
+    response,
+    data,
+  };
 }
 
 export default function AdminDashboard() {
@@ -138,65 +236,72 @@ export default function AdminDashboard() {
       }
 
       const [
-        propertiesResponse,
-        ownersResponse,
-        agentsResponse,
-        customersResponse,
-        enquiriesResponse,
+        propertiesResult,
+        ownersResult,
+        agentsResult,
+        customersResult,
+        enquiriesResult,
       ] = await Promise.all([
-        fetch(
-          `${API_BASE_URL}/properties?skip=0&limit=1000`,
-          {
-            method: "GET",
-            headers,
-            cache: "no-store",
-          }
+        fetchApi(
+          "/properties?skip=0&limit=1000",
+          headers
         ),
-
-        fetch(
-          `${API_BASE_URL}/users?role=owner&skip=0&limit=1000`,
-          {
-            method: "GET",
-            headers,
-            cache: "no-store",
-          }
+        fetchApi(
+          "/users?role=owner&skip=0&limit=1000",
+          headers
         ),
-
-        fetch(
-          `${API_BASE_URL}/users?role=agent&skip=0&limit=1000`,
-          {
-            method: "GET",
-            headers,
-            cache: "no-store",
-          }
+        fetchApi(
+          "/users?role=agent&skip=0&limit=1000",
+          headers
         ),
-
-        fetch(
-          `${API_BASE_URL}/users?role=customer&skip=0&limit=1000`,
-          {
-            method: "GET",
-            headers,
-            cache: "no-store",
-          }
+        fetchApi(
+          "/users?role=customer&skip=0&limit=1000",
+          headers
         ),
-
-        fetch(
-          `${API_BASE_URL}/enquiries?skip=0&limit=1000`,
-          {
-            method: "GET",
-            headers,
-            cache: "no-store",
-          }
+        fetchApi(
+          "/enquiries?skip=0&limit=1000",
+          headers
         ),
       ]);
 
-      if (propertiesResponse.ok) {
-        const propertiesData = await propertiesResponse.json();
+      const {
+        response: propertiesResponse,
+        data: propertiesData,
+      } = propertiesResult;
 
+      const {
+        response: ownersResponse,
+        data: ownersData,
+      } = ownersResult;
+
+      const {
+        response: agentsResponse,
+        data: agentsData,
+      } = agentsResult;
+
+      const {
+        response: customersResponse,
+        data: customersData,
+      } = customersResult;
+
+      const {
+        response: enquiriesResponse,
+        data: enquiriesData,
+      } = enquiriesResult;
+
+      if (propertiesResponse.ok) {
         const properties =
           extractList<Property>(propertiesData);
 
-        setTotalProperties(properties.length);
+        const backendTotal =
+          extractTotal(propertiesData);
+
+        const total =
+          backendTotal !== null
+            ? backendTotal
+            : properties.length;
+
+        setTotalProperties(total);
 
         setActiveProperties(
           properties.filter((property) => {
@@ -257,47 +362,65 @@ export default function AdminDashboard() {
       }
 
       if (ownersResponse.ok) {
-        const ownersData = await ownersResponse.json();
-
         const owners =
           extractList<StoredUser>(ownersData);
 
-        setTotalOwners(owners.length);
+        const backendTotal =
+          extractTotal(ownersData);
+
+        setTotalOwners(
+          backendTotal !== null
+            ? backendTotal
+            : owners.length
+        );
       } else {
         setTotalOwners(0);
       }
 
       if (agentsResponse.ok) {
-        const agentsData = await agentsResponse.json();
-
         const agents =
           extractList<StoredUser>(agentsData);
 
-        setTotalAgents(agents.length);
+        const backendTotal =
+          extractTotal(agentsData);
+
+        setTotalAgents(
+          backendTotal !== null
+            ? backendTotal
+            : agents.length
+        );
       } else {
         setTotalAgents(0);
       }
 
       if (customersResponse.ok) {
-        const customersData =
-          await customersResponse.json();
-
         const customers =
           extractList<StoredUser>(customersData);
 
-        setTotalCustomers(customers.length);
+        const backendTotal =
+          extractTotal(customersData);
+
+        setTotalCustomers(
+          backendTotal !== null
+            ? backendTotal
+            : customers.length
+        );
       } else {
         setTotalCustomers(0);
       }
 
       if (enquiriesResponse.ok) {
-        const enquiriesData =
-          await enquiriesResponse.json();
-
         const enquiries =
           extractList(enquiriesData);
 
-        setTotalEnquiries(enquiries.length);
+        const backendTotal =
+          extractTotal(enquiriesData);
+
+        setTotalEnquiries(
+          backendTotal !== null
+            ? backendTotal
+            : enquiries.length
+        );
       } else {
         const localEnquiries = getEnquiries();
 
