@@ -190,8 +190,20 @@ function extractTotal(data: unknown): number | null {
 
 async function fetchApi(
   endpoint: string,
-  headers: HeadersInit
+  useAuth = false
 ) {
+  const headers: HeadersInit = {
+    Accept: "application/json",
+  };
+
+  if (useAuth) {
+    const token = getAccessToken();
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
   const response = await fetch(
     `${API_BASE_URL}${endpoint}`,
     {
@@ -225,16 +237,6 @@ export default function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const token = getAccessToken();
-
-      const headers: HeadersInit = {
-        Accept: "application/json",
-      };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
       const [
         propertiesResult,
         ownersResult,
@@ -242,26 +244,11 @@ export default function AdminDashboard() {
         customersResult,
         enquiriesResult,
       ] = await Promise.all([
-        fetchApi(
-          "/properties?skip=0&limit=1000",
-          headers
-        ),
-        fetchApi(
-          "/users?role=owner&skip=0&limit=1000",
-          headers
-        ),
-        fetchApi(
-          "/users?role=agent&skip=0&limit=1000",
-          headers
-        ),
-        fetchApi(
-          "/users?role=customer&skip=0&limit=1000",
-          headers
-        ),
-        fetchApi(
-          "/enquiries?skip=0&limit=1000",
-          headers
-        ),
+        fetchApi("/properties?skip=0&limit=1000", false),
+        fetchApi("/users?role=owner&skip=0&limit=1000", true),
+        fetchApi("/users?role=agent&skip=0&limit=1000", true),
+        fetchApi("/users?role=customer&skip=0&limit=1000", true),
+        fetchApi("/enquiries?skip=0&limit=1000", true),
       ]);
 
       const {
@@ -303,57 +290,55 @@ export default function AdminDashboard() {
 
         setTotalProperties(total);
 
-        setActiveProperties(
-          properties.filter((property) => {
-            const status = String(
-              property.status || ""
-            ).toUpperCase();
+        const activeCount = properties.filter((property) => {
+          const status = String(
+            property.status || ""
+          ).toUpperCase();
 
-            const availability = String(
-              property.availability || ""
-            ).toUpperCase();
+          const availability = String(
+            property.availability || ""
+          ).toUpperCase();
 
-            return (
-              status === "ACTIVE" ||
-              status === "AVAILABLE" ||
-              availability === "AVAILABLE"
-            );
-          }).length
-        );
+          return (
+            status === "ACTIVE" ||
+            status === "AVAILABLE" ||
+            availability === "AVAILABLE"
+          );
+        }).length;
 
-        setSoldProperties(
-          properties.filter((property) => {
-            const status = String(
-              property.status || ""
-            ).toUpperCase();
+        const soldCount = properties.filter((property) => {
+          const status = String(
+            property.status || ""
+          ).toUpperCase();
 
-            const availability = String(
-              property.availability || ""
-            ).toUpperCase();
+          const availability = String(
+            property.availability || ""
+          ).toUpperCase();
 
-            return (
-              status === "SOLD" ||
-              availability === "SOLD"
-            );
-          }).length
-        );
+          return (
+            status === "SOLD" ||
+            availability === "SOLD"
+          );
+        }).length;
 
-        setRentedProperties(
-          properties.filter((property) => {
-            const status = String(
-              property.status || ""
-            ).toUpperCase();
+        const rentedCount = properties.filter((property) => {
+          const status = String(
+            property.status || ""
+          ).toUpperCase();
 
-            const availability = String(
-              property.availability || ""
-            ).toUpperCase();
+          const availability = String(
+            property.availability || ""
+          ).toUpperCase();
 
-            return (
-              status === "RENTED" ||
-              availability === "RENTED"
-            );
-          }).length
-        );
+          return (
+            status === "RENTED" ||
+            availability === "RENTED"
+          );
+        }).length;
+
+        setActiveProperties(activeCount);
+        setSoldProperties(soldCount);
+        setRentedProperties(rentedCount);
       } else {
         setTotalProperties(0);
         setActiveProperties(0);
