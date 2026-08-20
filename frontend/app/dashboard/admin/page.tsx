@@ -32,7 +32,7 @@ type StoredUser = {
 
 const API_BASE_URL = "https://estate-flow-bj2z.onrender.com/api/v1";
 
-function getAccessToken() {
+function getAccessToken(): string | null {
   if (typeof window === "undefined") {
     return null;
   }
@@ -190,39 +190,39 @@ function extractTotal(data: unknown): number | null {
 
 async function fetchApi(
   endpoint: string,
-  useAuth = false
-) {
-  const headers: HeadersInit = {
-    Accept: "application/json",
-  };
-
-  if (useAuth) {
-    const token = getAccessToken();
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
-  const response = await fetch(
-    `${API_BASE_URL}${endpoint}`,
-    {
-      method: "GET",
-      headers,
-      cache: "no-store",
-    }
-  );
-
-  let data: unknown = null;
-
+  headers: HeadersInit
+): Promise<{
+  ok: boolean;
+  data: unknown;
+}> {
   try {
-    data = await response.json();
-  } catch {}
+    const response = await fetch(
+      `${API_BASE_URL}${endpoint}`,
+      {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      }
+    );
 
-  return {
-    response,
-    data,
-  };
+    let data: unknown = null;
+
+    try {
+      data = await response.json();
+    } catch {}
+
+    return {
+      ok: response.ok,
+      data,
+    };
+  } catch (error) {
+    console.error(`API request failed: ${endpoint}`, error);
+
+    return {
+      ok: false,
+      data: null,
+    };
+  }
 }
 
 export default function AdminDashboard() {
@@ -236,61 +236,36 @@ export default function AdminDashboard() {
   const [totalEnquiries, setTotalEnquiries] = useState(0);
 
   const loadDashboardData = async () => {
-    try {
-      const [
-        propertiesResult,
-        ownersResult,
-        agentsResult,
-        customersResult,
-        enquiriesResult,
-      ] = await Promise.all([
-        fetchApi("/properties?skip=0&limit=1000", false),
-        fetchApi("/users?role=owner&skip=0&limit=1000", true),
-        fetchApi("/users?role=agent&skip=0&limit=1000", true),
-        fetchApi("/users?role=customer&skip=0&limit=1000", true),
-        fetchApi("/enquiries?skip=0&limit=1000", true),
-      ]);
+    const token = getAccessToken();
 
-      const {
-        response: propertiesResponse,
-        data: propertiesData,
-      } = propertiesResult;
+    const headers: HeadersInit = {
+      Accept: "application/json",
+    };
 
-      const {
-        response: ownersResponse,
-        data: ownersData,
-      } = ownersResult;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
-      const {
-        response: agentsResponse,
-        data: agentsData,
-      } = agentsResult;
+    const propertiesResult = await fetchApi(
+      "/properties?skip=0&limit=1000",
+      headers
+    );
 
-      const {
-        response: customersResponse,
-        data: customersData,
-      } = customersResult;
+    if (propertiesResult.ok) {
+      const properties =
+        extractList<Property>(propertiesResult.data);
 
-      const {
-        response: enquiriesResponse,
-        data: enquiriesData,
-      } = enquiriesResult;
+      const backendTotal =
+        extractTotal(propertiesResult.data);
 
-      if (propertiesResponse.ok) {
-        const properties =
-          extractList<Property>(propertiesData);
+      setTotalProperties(
+        backendTotal !== null
+          ? backendTotal
+          : properties.length
+      );
 
-        const backendTotal =
-          extractTotal(propertiesData);
-
-        const total =
-          backendTotal !== null
-            ? backendTotal
-            : properties.length;
-
-        setTotalProperties(total);
-
-        const activeCount = properties.filter((property) => {
+      setActiveProperties(
+        properties.filter((property) => {
           const status = String(
             property.status || ""
           ).toUpperCase();
@@ -304,9 +279,11 @@ export default function AdminDashboard() {
             status === "AVAILABLE" ||
             availability === "AVAILABLE"
           );
-        }).length;
+        }).length
+      );
 
-        const soldCount = properties.filter((property) => {
+      setSoldProperties(
+        properties.filter((property) => {
           const status = String(
             property.status || ""
           ).toUpperCase();
@@ -319,9 +296,11 @@ export default function AdminDashboard() {
             status === "SOLD" ||
             availability === "SOLD"
           );
-        }).length;
+        }).length
+      );
 
-        const rentedCount = properties.filter((property) => {
+      setRentedProperties(
+        properties.filter((property) => {
           const status = String(
             property.status || ""
           ).toUpperCase();
@@ -334,99 +313,96 @@ export default function AdminDashboard() {
             status === "RENTED" ||
             availability === "RENTED"
           );
-        }).length;
+        }).length
+      );
+    }
 
-        setActiveProperties(activeCount);
-        setSoldProperties(soldCount);
-        setRentedProperties(rentedCount);
-      } else {
-        setTotalProperties(0);
-        setActiveProperties(0);
-        setSoldProperties(0);
-        setRentedProperties(0);
-      }
+    const ownersResult = await fetchApi(
+      "/users?role=owner&skip=0&limit=1000",
+      headers
+    );
 
-      if (ownersResponse.ok) {
-        const owners =
-          extractList<StoredUser>(ownersData);
+    if (ownersResult.ok) {
+      const owners =
+        extractList<StoredUser>(ownersResult.data);
 
-        const backendTotal =
-          extractTotal(ownersData);
+      const backendTotal =
+        extractTotal(ownersResult.data);
 
-        setTotalOwners(
-          backendTotal !== null
-            ? backendTotal
-            : owners.length
+      setTotalOwners(
+        backendTotal !== null
+          ? backendTotal
+          : owners.length
+      );
+    }
+
+    const agentsResult = await fetchApi(
+      "/users?role=agent&skip=0&limit=1000",
+      headers
+    );
+
+    if (agentsResult.ok) {
+      const agents =
+        extractList<StoredUser>(agentsResult.data);
+
+      const backendTotal =
+        extractTotal(agentsResult.data);
+
+      setTotalAgents(
+        backendTotal !== null
+          ? backendTotal
+          : agents.length
+      );
+    }
+
+    const customersResult = await fetchApi(
+      "/users?role=customer&skip=0&limit=1000",
+      headers
+    );
+
+    if (customersResult.ok) {
+      const customers =
+        extractList<StoredUser>(
+          customersResult.data
         );
-      } else {
-        setTotalOwners(0);
-      }
 
-      if (agentsResponse.ok) {
-        const agents =
-          extractList<StoredUser>(agentsData);
+      const backendTotal =
+        extractTotal(customersResult.data);
 
-        const backendTotal =
-          extractTotal(agentsData);
+      setTotalCustomers(
+        backendTotal !== null
+          ? backendTotal
+          : customers.length
+      );
+    }
 
-        setTotalAgents(
-          backendTotal !== null
-            ? backendTotal
-            : agents.length
-        );
-      } else {
-        setTotalAgents(0);
-      }
+    const enquiriesResult = await fetchApi(
+      "/enquiries?skip=0&limit=1000",
+      headers
+    );
 
-      if (customersResponse.ok) {
-        const customers =
-          extractList<StoredUser>(customersData);
+    if (enquiriesResult.ok) {
+      const enquiries =
+        extractList(enquiriesResult.data);
 
-        const backendTotal =
-          extractTotal(customersData);
+      const backendTotal =
+        extractTotal(enquiriesResult.data);
 
-        setTotalCustomers(
-          backendTotal !== null
-            ? backendTotal
-            : customers.length
-        );
-      } else {
-        setTotalCustomers(0);
-      }
-
-      if (enquiriesResponse.ok) {
-        const enquiries =
-          extractList(enquiriesData);
-
-        const backendTotal =
-          extractTotal(enquiriesData);
-
-        setTotalEnquiries(
-          backendTotal !== null
-            ? backendTotal
-            : enquiries.length
-        );
-      } else {
+      setTotalEnquiries(
+        backendTotal !== null
+          ? backendTotal
+          : enquiries.length
+      );
+    } else {
+      try {
         const localEnquiries = getEnquiries();
 
         setTotalEnquiries(
           localEnquiries.length
         );
+      } catch {
+        setTotalEnquiries(0);
       }
-    } catch {
-      setTotalProperties(0);
-      setActiveProperties(0);
-      setSoldProperties(0);
-      setRentedProperties(0);
-      setTotalOwners(0);
-      setTotalAgents(0);
-      setTotalCustomers(0);
-
-      const localEnquiries = getEnquiries();
-
-      setTotalEnquiries(
-        localEnquiries.length
-      );
     }
   };
 
