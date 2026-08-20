@@ -45,7 +45,7 @@ export default function RegisterPage() {
 
     try {
       const response = await fetch(
-        "http://localhost:8000/api/v1/auth/register",
+        "https://estate-flow-bj2z.onrender.com/api/v1/auth/register",
         {
           method: "POST",
           headers: {
@@ -93,7 +93,6 @@ export default function RegisterPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#061A3A] text-white">
-      {/* Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -left-40 top-10 h-[500px] w-[500px] rounded-full bg-[#0B63F6]/20 blur-[140px]" />
 
@@ -111,7 +110,6 @@ export default function RegisterPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(11,99,246,0.12),transparent_55%)]" />
       </div>
 
-      {/* Top Navigation */}
       <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2F8CFF]/80 bg-[#061A3A]/60 backdrop-blur-sm">
@@ -132,10 +130,8 @@ export default function RegisterPage() {
         </Link>
       </div>
 
-      {/* Register Container */}
       <div className="relative z-10 flex min-h-[calc(100vh-90px)] items-center justify-center px-6 py-10">
         <div className="w-full max-w-md">
-          {/* Heading */}
           <div className="mb-8 text-center">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#2F8CFF]/30 bg-[#0B2148]/70 shadow-lg shadow-[#0B63F6]/10">
               <User className="h-6 w-6 text-[#4DA3FF]" />
@@ -150,10 +146,8 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Card */}
           <div className="rounded-[28px] border border-white/10 bg-white/[0.06] p-7 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-8">
             <form onSubmit={handleRegister} className="space-y-5">
-              {/* Name */}
               <div>
                 <label
                   htmlFor="name"
@@ -178,7 +172,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Email */}
               <div>
                 <label
                   htmlFor="email"
@@ -203,7 +196,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label
                   htmlFor="password"
@@ -243,7 +235,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Confirm Password */}
               <div>
                 <label
                   htmlFor="confirmPassword"
@@ -287,21 +278,18 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Error */}
               {error && (
                 <div className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">
                   {error}
                 </div>
               )}
 
-              {/* Success */}
               {success && (
                 <div className="rounded-xl border border-green-400/20 bg-green-400/10 px-4 py-3 text-sm text-green-300">
                   {success}
                 </div>
               )}
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
@@ -315,7 +303,6 @@ export default function RegisterPage() {
               </button>
             </form>
 
-            {/* Login */}
             <div className="mt-7 border-t border-white/10 pt-6 text-center">
               <p className="text-sm text-white/45">
                 Already have an EstateFlow account?
