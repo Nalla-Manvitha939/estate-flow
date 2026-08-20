@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { getPropertyById, updateProperty } from "@/lib/propertyStore";
 import { Property } from "@/types/property";
@@ -22,7 +22,7 @@ import {
   PropertyType,
 } from "@/types/property";
 
-const API_URL = "http://localhost:8000/api/v1";
+const API_URL = "https://estate-flow-bj2z.onrender.com/api/v1";
 
 type User = {
   id: string;
@@ -33,9 +33,9 @@ type User = {
 
 export default function AdminAddPropertyPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const editId = searchParams.get("edit");
-  const isEditMode = Boolean(editId);
+
+  const [editId, setEditId] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [loadingProperty, setLoadingProperty] = useState(false);
@@ -44,8 +44,6 @@ export default function AdminAddPropertyPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  
-  
   const [selectedImage, setSelectedImage] = useState("");
   const [selectedImageName, setSelectedImageName] = useState("");
 
@@ -84,9 +82,13 @@ export default function AdminAddPropertyPage() {
     listedDate: "",
   });
 
-  
-  
-  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const currentEditId = params.get("edit") || "";
+
+    setEditId(currentEditId);
+    setIsEditMode(Boolean(currentEditId));
+  }, []);
 
   const getAccessToken = () => {
     if (typeof window === "undefined") {
@@ -113,7 +115,9 @@ export default function AdminAddPropertyPage() {
     for (const key of possibleKeys) {
       const value = localStorage.getItem(key);
 
-      if (!value) continue;
+      if (!value) {
+        continue;
+      }
 
       try {
         const parsed = JSON.parse(value);
@@ -129,17 +133,11 @@ export default function AdminAddPropertyPage() {
         if (parsed?.token) {
           return parsed.token;
         }
-      } catch {
-        // Ignore invalid JSON
-      }
+      } catch {}
     }
 
     return null;
   };
-
-  
-  
-  
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -157,7 +155,6 @@ export default function AdminAddPropertyPage() {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        
         const ownerResponse = await fetch(
           `${API_URL}/users?role=owner&skip=0&limit=100`,
           {
@@ -167,18 +164,17 @@ export default function AdminAddPropertyPage() {
         );
 
         if (!ownerResponse.ok) {
-          const ownerError = await ownerResponse.json().catch(() => ({}));
+          const ownerError = await ownerResponse
+            .json()
+            .catch(() => ({}));
 
           throw new Error(
-            ownerError?.detail ||
-              "Failed to load owners."
+            ownerError?.detail || "Failed to load owners."
           );
         }
 
-        const ownerData: User[] =
-          await ownerResponse.json();
+        const ownerData: User[] = await ownerResponse.json();
 
-        
         const agentResponse = await fetch(
           `${API_URL}/users?role=agent&skip=0&limit=100`,
           {
@@ -188,21 +184,20 @@ export default function AdminAddPropertyPage() {
         );
 
         if (!agentResponse.ok) {
-          const agentError = await agentResponse.json().catch(() => ({}));
+          const agentError = await agentResponse
+            .json()
+            .catch(() => ({}));
 
           throw new Error(
-            agentError?.detail ||
-              "Failed to load agents."
+            agentError?.detail || "Failed to load agents."
           );
         }
 
-        const agentData: User[] =
-          await agentResponse.json();
+        const agentData: User[] = await agentResponse.json();
 
         setOwners(ownerData);
         setAgents(agentData);
 
-        
         if (!editId && ownerData.length > 0) {
           const firstOwner = ownerData[0];
 
@@ -213,7 +208,6 @@ export default function AdminAddPropertyPage() {
           }));
         }
 
-        
         if (!editId && agentData.length > 0) {
           const firstAgent = agentData[0];
 
@@ -224,11 +218,6 @@ export default function AdminAddPropertyPage() {
           }));
         }
       } catch (error) {
-        console.error(
-          "Failed to load owners and agents:",
-          error
-        );
-
         setErrorMessage(
           error instanceof Error
             ? error.message
@@ -240,11 +229,8 @@ export default function AdminAddPropertyPage() {
     };
 
     loadUsers();
-  }, []);
+  }, [editId]);
 
-  
-  
-  
   useEffect(() => {
     if (!editId) {
       return;
@@ -293,45 +279,23 @@ export default function AdminAddPropertyPage() {
             (property.listingType ??
               "SALE") as ListingType,
 
-          ownerId: String(
-            property.ownerId ??
-              ""
-          ),
-          ownerName: String(
-            property.ownerName ??
-              ""
-          ),
+          ownerId: String(property.ownerId ?? ""),
+          ownerName: String(property.ownerName ?? ""),
 
-          agentId: String(
-            property.agentId ??
-              ""
-          ),
-          agentName: String(
-            property.agentName ??
-              ""
-          ),
+          agentId: String(property.agentId ?? ""),
+          agentName: String(property.agentName ?? ""),
 
           price: String(property.price ?? ""),
           area: String(property.area ?? ""),
-          bedrooms: String(
-            property.bedrooms ?? 0
-          ),
-          bathrooms: String(
-            property.bathrooms ?? 0
-          ),
+          bedrooms: String(property.bedrooms ?? 0),
+          bathrooms: String(property.bathrooms ?? 0),
 
-          location: String(
-            property.location ?? ""
-          ),
+          location: String(property.location ?? ""),
           city: String(property.city ?? ""),
           state: String(property.state ?? ""),
-          pincode: String(
-            property.pincode ?? ""
-          ),
+          pincode: String(property.pincode ?? ""),
 
-          description: String(
-            property.description ?? ""
-          ),
+          description: String(property.description ?? ""),
 
           images: images.join(", "),
           documents: Array.isArray(property.documents)
@@ -344,6 +308,7 @@ export default function AdminAddPropertyPage() {
           availability:
             (property.availability ??
               "AVAILABLE") as PropertyAvailability,
+
           listedDate: listedDateValue,
         });
 
@@ -352,11 +317,6 @@ export default function AdminAddPropertyPage() {
           firstImage ? "Current property image" : ""
         );
       } catch (error) {
-        console.error(
-          "Failed to load property for editing:",
-          error
-        );
-
         if (!cancelled) {
           setErrorMessage(
             error instanceof Error
@@ -378,10 +338,6 @@ export default function AdminAddPropertyPage() {
     };
   }, [editId]);
 
-  
-  
-  
-
   const updateField = (
     field: string,
     value: string
@@ -391,10 +347,6 @@ export default function AdminAddPropertyPage() {
       [field]: value,
     }));
   };
-
-  
-  
-  
 
   const handleOwnerChange = (ownerId: string) => {
     const selectedOwner = owners.find(
@@ -418,10 +370,6 @@ export default function AdminAddPropertyPage() {
     }));
   };
 
-  
-  
-  
-
   const handleAgentChange = (agentId: string) => {
     const selectedAgent = agents.find(
       (agent) => agent.id === agentId
@@ -444,21 +392,24 @@ export default function AdminAddPropertyPage() {
     }));
   };
 
-  
-  
-  
-  const handleImageUpload = (file: File | undefined) => {
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setErrorMessage("Please select a valid image file.");
+  const handleImageUpload = (
+    file: File | undefined
+  ) => {
+    if (!file) {
       return;
     }
 
-    
-    
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage(
+        "Please select a valid image file."
+      );
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage("Please select an image smaller than 5 MB.");
+      setErrorMessage(
+        "Please select an image smaller than 5 MB."
+      );
       return;
     }
 
@@ -468,7 +419,9 @@ export default function AdminAddPropertyPage() {
       const result = reader.result;
 
       if (typeof result !== "string") {
-        setErrorMessage("Unable to read the selected image.");
+        setErrorMessage(
+          "Unable to read the selected image."
+        );
         return;
       }
 
@@ -479,7 +432,9 @@ export default function AdminAddPropertyPage() {
     };
 
     reader.onerror = () => {
-      setErrorMessage("Unable to read the selected image.");
+      setErrorMessage(
+        "Unable to read the selected image."
+      );
     };
 
     reader.readAsDataURL(file);
@@ -490,10 +445,6 @@ export default function AdminAddPropertyPage() {
     setSelectedImageName("");
     updateField("images", "");
   };
-
-  
-  
-  
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
@@ -525,9 +476,6 @@ export default function AdminAddPropertyPage() {
         );
       }
 
-      
-      
-      
       const imageList = selectedImage
         ? [selectedImage]
         : form.images
@@ -545,9 +493,6 @@ export default function AdminAddPropertyPage() {
         .map((item) => item.trim())
         .filter(Boolean);
 
-      
-      
-      
       if (isEditMode && editId) {
         const updates: Partial<Property> = {
           ownerId: form.ownerId,
@@ -575,21 +520,17 @@ export default function AdminAddPropertyPage() {
             : undefined,
         };
 
-        const updatedProperty = await updateProperty(
-          editId,
-          updates
-        );
+        const updatedProperty =
+          await updateProperty(
+            editId,
+            updates
+          );
 
         if (!updatedProperty) {
           throw new Error(
             "Failed to update property."
           );
         }
-
-        console.log(
-          "Property updated successfully:",
-          updatedProperty
-        );
 
         setSuccessMessage(
           `Property "${updatedProperty.title}" updated successfully!`
@@ -609,10 +550,6 @@ export default function AdminAddPropertyPage() {
 
         return;
       }
-
-      
-      
-      
 
       const propertyPayload = {
         id: form.id.trim() || undefined,
@@ -653,15 +590,6 @@ export default function AdminAddPropertyPage() {
           : null,
       };
 
-      console.log(
-        "Sending property to backend:",
-        propertyPayload
-      );
-
-      
-      
-      
-
       const response = await fetch(
         `${API_URL}/properties`,
         {
@@ -689,18 +617,9 @@ export default function AdminAddPropertyPage() {
         );
       }
 
-      console.log(
-        "Property saved successfully:",
-        data
-      );
-
       setSuccessMessage(
         `Property "${data.title}" saved successfully!`
       );
-
-      
-      
-      
 
       setForm({
         id: "",
@@ -755,21 +674,12 @@ export default function AdminAddPropertyPage() {
       setSelectedImage("");
       setSelectedImageName("");
 
-      
-      
-      
-
       setTimeout(() => {
         router.push(
           "/dashboard/admin/properties"
         );
       }, 1200);
     } catch (error) {
-      console.error(
-        "Failed to save property:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -786,9 +696,6 @@ export default function AdminAddPropertyPage() {
   return (
     <DashboardLayout role="admin">
       <div className="mx-auto max-w-6xl">
-
-        {/* HEADER */}
-
         <div className="mb-8">
           <Link
             href="/dashboard/admin/properties"
@@ -799,7 +706,9 @@ export default function AdminAddPropertyPage() {
           </Link>
 
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            {isEditMode ? "Edit Property" : "Add Property"}
+            {isEditMode
+              ? "Edit Property"
+              : "Add Property"}
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
@@ -835,585 +744,565 @@ export default function AdminAddPropertyPage() {
             onSubmit={handleSubmit}
             className="space-y-6"
           >
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Building2 className="h-5 w-5" />
+                </div>
 
-          {/* PROPERTY INFORMATION */}
+                <div>
+                  <h2 className="font-semibold text-slate-900">
+                    Property Information
+                  </h2>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <Building2 className="h-5 w-5" />
+                  <p className="text-sm text-slate-500">
+                    Enter the basic property
+                    information.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h2 className="font-semibold text-slate-900">
-                  Property Information
-                </h2>
-
-                <p className="text-sm text-slate-500">
-                  Enter the basic property
-                  information.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-
-              <Field
-                label="Property ID"
-                value={form.id}
-                onChange={(value) =>
-                  updateField(
-                    "id",
-                    value
-                  )
-                }
-                placeholder="Leave empty for automatic UUID"
-                className={inputClass}
-              />
-
-              <Field
-                label="Property Title"
-                value={form.title}
-                onChange={(value) =>
-                  updateField(
-                    "title",
-                    value
-                  )
-                }
-                placeholder="Premium 3 BHK Apartment"
-                required
-                className={inputClass}
-              />
-
-              <SelectField
-                label="Property Type"
-                value={form.propertyType}
-                onChange={(value) =>
-                  updateField(
-                    "propertyType",
-                    value
-                  )
-                }
-                className={inputClass}
-                options={[
-                  [
-                    "APARTMENT",
-                    "Apartment",
-                  ],
-                  ["VILLA", "Villa"],
-                  ["HOUSE", "House"],
-                  ["PLOT", "Plot"],
-                  [
-                    "COMMERCIAL",
-                    "Commercial",
-                  ],
-                ]}
-              />
-
-              <SelectField
-                label="Listing Type"
-                value={form.listingType}
-                onChange={(value) =>
-                  updateField(
-                    "listingType",
-                    value
-                  )
-                }
-                className={inputClass}
-                options={[
-                  [
-                    "SALE",
-                    "For Sale",
-                  ],
-                  [
-                    "RENT",
-                    "For Rent",
-                  ],
-                ]}
-              />
-
-              {/* OWNER DROPDOWN */}
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Owner
-                </label>
-
-                <select
-                  value={form.ownerId}
-                  onChange={(e) =>
-                    handleOwnerChange(
-                      e.target.value
-                    )
-                  }
-                  disabled={
-                    loadingUsers ||
-                    owners.length === 0
-                  }
-                  className={inputClass}
-                >
-                  <option value="">
-                    {loadingUsers
-                      ? "Loading owners..."
-                      : owners.length === 0
-                      ? "No owners found"
-                      : "Select owner"}
-                  </option>
-
-                  {owners.map((owner) => (
-                    <option
-                      key={owner.id}
-                      value={owner.id}
-                    >
-                      {owner.name}
-                    </option>
-                  ))}
-                </select>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Owner ID is automatically
-                  selected
-                </p>
-              </div>
-
-              {/* AGENT DROPDOWN */}
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Agent
-                </label>
-
-                <select
-                  value={form.agentId}
-                  onChange={(e) =>
-                    handleAgentChange(
-                      e.target.value
-                    )
-                  }
-                  disabled={
-                    loadingUsers ||
-                    agents.length === 0
-                  }
-                  className={inputClass}
-                >
-                  <option value="">
-                    {loadingUsers
-                      ? "Loading agents..."
-                      : agents.length === 0
-                      ? "No agents found"
-                      : "Select agent"}
-                  </option>
-
-                  {agents.map((agent) => (
-                    <option
-                      key={agent.id}
-                      value={agent.id}
-                    >
-                      {agent.name}
-                    </option>
-                  ))}
-                </select>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Agent ID is automatically
-                  selected 
-                </p>
-              </div>
-
-              <Field
-                label="Price"
-                type="number"
-                value={form.price}
-                onChange={(value) =>
-                  updateField(
-                    "price",
-                    value
-                  )
-                }
-                placeholder="7500000"
-                required
-                className={inputClass}
-              />
-
-              <Field
-                label="Area (sq.ft)"
-                type="number"
-                value={form.area}
-                onChange={(value) =>
-                  updateField(
-                    "area",
-                    value
-                  )
-                }
-                placeholder="1500"
-                required
-                className={inputClass}
-              />
-
-              <Field
-                label="Bedrooms"
-                type="number"
-                value={form.bedrooms}
-                onChange={(value) =>
-                  updateField(
-                    "bedrooms",
-                    value
-                  )
-                }
-                placeholder="3"
-                className={inputClass}
-              />
-
-              <Field
-                label="Bathrooms"
-                type="number"
-                value={form.bathrooms}
-                onChange={(value) =>
-                  updateField(
-                    "bathrooms",
-                    value
-                  )
-                }
-                placeholder="2"
-                className={inputClass}
-              />
-
-            </div>
-          </section>
-
-          {/* LOCATION */}
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <div className="mb-6 flex items-center gap-3">
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <MapPin className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="font-semibold text-slate-900">
-                  Location
-                </h2>
-
-                <p className="text-sm text-slate-500">
-                  Enter the property location.
-                </p>
-              </div>
-
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-
-              <div className="md:col-span-2">
+              <div className="grid gap-5 md:grid-cols-2">
                 <Field
-                  label="Location / Address"
-                  value={form.location}
+                  label="Property ID"
+                  value={form.id}
                   onChange={(value) =>
                     updateField(
-                      "location",
+                      "id",
                       value
                     )
                   }
-                  placeholder="Benz Circle"
+                  placeholder="Leave empty for automatic UUID"
+                  className={inputClass}
+                />
+
+                <Field
+                  label="Property Title"
+                  value={form.title}
+                  onChange={(value) =>
+                    updateField(
+                      "title",
+                      value
+                    )
+                  }
+                  placeholder="Premium 3 BHK Apartment"
                   required
                   className={inputClass}
                 />
-              </div>
 
-              <Field
-                label="City"
-                value={form.city}
-                onChange={(value) =>
-                  updateField(
-                    "city",
-                    value
-                  )
-                }
-                placeholder="Vijayawada"
-                required
-                className={inputClass}
-              />
+                <SelectField
+                  label="Property Type"
+                  value={form.propertyType}
+                  onChange={(value) =>
+                    updateField(
+                      "propertyType",
+                      value
+                    )
+                  }
+                  className={inputClass}
+                  options={[
+                    [
+                      "APARTMENT",
+                      "Apartment",
+                    ],
+                    [
+                      "VILLA",
+                      "Villa",
+                    ],
+                    [
+                      "HOUSE",
+                      "House",
+                    ],
+                    [
+                      "PLOT",
+                      "Plot",
+                    ],
+                    [
+                      "COMMERCIAL",
+                      "Commercial",
+                    ],
+                  ]}
+                />
 
-              <Field
-                label="State"
-                value={form.state}
-                onChange={(value) =>
-                  updateField(
-                    "state",
-                    value
-                  )
-                }
-                placeholder="Andhra Pradesh"
-                required
-                className={inputClass}
-              />
+                <SelectField
+                  label="Listing Type"
+                  value={form.listingType}
+                  onChange={(value) =>
+                    updateField(
+                      "listingType",
+                      value
+                    )
+                  }
+                  className={inputClass}
+                  options={[
+                    [
+                      "SALE",
+                      "For Sale",
+                    ],
+                    [
+                      "RENT",
+                      "For Rent",
+                    ],
+                  ]}
+                />
 
-              <Field
-                label="Pincode"
-                value={form.pincode}
-                onChange={(value) =>
-                  updateField(
-                    "pincode",
-                    value
-                  )
-                }
-                placeholder="520010"
-                className={inputClass}
-              />
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Owner
+                  </label>
 
-            </div>
-          </section>
+                  <select
+                    value={form.ownerId}
+                    onChange={(e) =>
+                      handleOwnerChange(
+                        e.target.value
+                      )
+                    }
+                    disabled={
+                      loadingUsers ||
+                      owners.length === 0
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      {loadingUsers
+                        ? "Loading owners..."
+                        : owners.length === 0
+                        ? "No owners found"
+                        : "Select owner"}
+                    </option>
 
-          {/* DESCRIPTION */}
+                    {owners.map(
+                      (owner) => (
+                        <option
+                          key={owner.id}
+                          value={owner.id}
+                        >
+                          {owner.name}
+                        </option>
+                      )
+                    )}
+                  </select>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <div className="mb-6 flex items-center gap-3">
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <FileText className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="font-semibold text-slate-900">
-                  Description & Documents
-                </h2>
-
-                <p className="text-sm text-slate-500">
-                  Add property description and
-                  documents.
-                </p>
-              </div>
-
-            </div>
-
-            <div className="space-y-5">
-
-              <TextAreaField
-                label="Description"
-                value={form.description}
-                onChange={(value) =>
-                  updateField(
-                    "description",
-                    value
-                  )
-                }
-                placeholder="A premium three bedroom apartment located in Vijayawada."
-                required
-              />
-
-              <Field
-                label="Documents"
-                value={form.documents}
-                onChange={(value) =>
-                  updateField(
-                    "documents",
-                    value
-                  )
-                }
-                placeholder="Sale Deed, Tax Receipt"
-                className={inputClass}
-              />
-
-            </div>
-          </section>
-
-          {/* IMAGES & AMENITIES */}
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <div className="mb-6 flex items-center gap-3">
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <ImageIcon className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="font-semibold text-slate-900">
-                  Images & Amenities
-                </h2>
-
-                <p className="text-sm text-slate-500">
-                  Add image URLs and amenities.
-                </p>
-              </div>
-
-            </div>
-
-            <div className="space-y-5">
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Property Image
-                </label>
-
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">
-                        {selectedImageName || "No image selected"}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        Choose an image from your computer. No image URL is required.
-                      </p>
-                    </div>
-
-                    <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700">
-                      <Upload className="h-4 w-4" />
-                      Add Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(event) => {
-                          handleImageUpload(event.target.files?.[0]);
-                          event.currentTarget.value = "";
-                        }}
-                      />
-                    </label>
-                  </div>
-
-                  {selectedImage && (
-                    <div className="relative mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                      <img
-                        src={selectedImage}
-                        alt="Selected property"
-                        className="h-56 w-full object-cover"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={removeSelectedImage}
-                        className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-md transition hover:bg-red-50 hover:text-red-600"
-                        aria-label="Remove image"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
+                  <p className="mt-1 text-xs text-slate-400">
+                    Owner ID is automatically
+                    selected
+                  </p>
                 </div>
 
-                <p className="mt-2 text-xs text-slate-400">
-                  The selected image is included in the property data sent to PostgreSQL and can be displayed in the properties table/view.
-                </p>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Agent
+                  </label>
+
+                  <select
+                    value={form.agentId}
+                    onChange={(e) =>
+                      handleAgentChange(
+                        e.target.value
+                      )
+                    }
+                    disabled={
+                      loadingUsers ||
+                      agents.length === 0
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      {loadingUsers
+                        ? "Loading agents..."
+                        : agents.length === 0
+                        ? "No agents found"
+                        : "Select agent"}
+                    </option>
+
+                    {agents.map(
+                      (agent) => (
+                        <option
+                          key={agent.id}
+                          value={agent.id}
+                        >
+                          {agent.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Agent ID is automatically
+                    selected
+                  </p>
+                </div>
+
+                <Field
+                  label="Price"
+                  type="number"
+                  value={form.price}
+                  onChange={(value) =>
+                    updateField(
+                      "price",
+                      value
+                    )
+                  }
+                  placeholder="7500000"
+                  required
+                  className={inputClass}
+                />
+
+                <Field
+                  label="Area (sq.ft)"
+                  type="number"
+                  value={form.area}
+                  onChange={(value) =>
+                    updateField(
+                      "area",
+                      value
+                    )
+                  }
+                  placeholder="1500"
+                  required
+                  className={inputClass}
+                />
+
+                <Field
+                  label="Bedrooms"
+                  type="number"
+                  value={form.bedrooms}
+                  onChange={(value) =>
+                    updateField(
+                      "bedrooms",
+                      value
+                    )
+                  }
+                  placeholder="3"
+                  className={inputClass}
+                />
+
+                <Field
+                  label="Bathrooms"
+                  type="number"
+                  value={form.bathrooms}
+                  onChange={(value) =>
+                    updateField(
+                      "bathrooms",
+                      value
+                    )
+                  }
+                  placeholder="2"
+                  className={inputClass}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <MapPin className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="font-semibold text-slate-900">
+                    Location
+                  </h2>
+
+                  <p className="text-sm text-slate-500">
+                    Enter the property location.
+                  </p>
+                </div>
               </div>
 
-              <Field
-                label="Amenities"
-                value={form.amenities}
-                onChange={(value) =>
-                  updateField(
-                    "amenities",
-                    value
-                  )
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <Field
+                    label="Location / Address"
+                    value={form.location}
+                    onChange={(value) =>
+                      updateField(
+                        "location",
+                        value
+                      )
+                    }
+                    placeholder="Benz Circle"
+                    required
+                    className={inputClass}
+                  />
+                </div>
+
+                <Field
+                  label="City"
+                  value={form.city}
+                  onChange={(value) =>
+                    updateField(
+                      "city",
+                      value
+                    )
+                  }
+                  placeholder="Vijayawada"
+                  required
+                  className={inputClass}
+                />
+
+                <Field
+                  label="State"
+                  value={form.state}
+                  onChange={(value) =>
+                    updateField(
+                      "state",
+                      value
+                    )
+                  }
+                  placeholder="Andhra Pradesh"
+                  required
+                  className={inputClass}
+                />
+
+                <Field
+                  label="Pincode"
+                  value={form.pincode}
+                  onChange={(value) =>
+                    updateField(
+                      "pincode",
+                      value
+                    )
+                  }
+                  placeholder="520010"
+                  className={inputClass}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <FileText className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="font-semibold text-slate-900">
+                    Description & Documents
+                  </h2>
+
+                  <p className="text-sm text-slate-500">
+                    Add property description and
+                    documents.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <TextAreaField
+                  label="Description"
+                  value={form.description}
+                  onChange={(value) =>
+                    updateField(
+                      "description",
+                      value
+                    )
+                  }
+                  placeholder="A premium three bedroom apartment located in Vijayawada."
+                  required
+                />
+
+                <Field
+                  label="Documents"
+                  value={form.documents}
+                  onChange={(value) =>
+                    updateField(
+                      "documents",
+                      value
+                    )
+                  }
+                  placeholder="Sale Deed, Tax Receipt"
+                  className={inputClass}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <ImageIcon className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="font-semibold text-slate-900">
+                    Images & Amenities
+                  </h2>
+
+                  <p className="text-sm text-slate-500">
+                    Add image URLs and amenities.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Property Image
+                  </label>
+
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">
+                          {selectedImageName ||
+                            "No image selected"}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          Choose an image from your computer. No image URL is required.
+                        </p>
+                      </div>
+
+                      <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700">
+                        <Upload className="h-4 w-4" />
+                        Add Image
+
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            handleImageUpload(
+                              event.target.files?.[0]
+                            );
+                            event.currentTarget.value =
+                              "";
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    {selectedImage && (
+                      <div className="relative mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <img
+                          src={selectedImage}
+                          alt="Selected property"
+                          className="h-56 w-full object-cover"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={
+                            removeSelectedImage
+                          }
+                          className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-md transition hover:bg-red-50 hover:text-red-600"
+                          aria-label="Remove image"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-400">
+                    The selected image is included in the property data sent to PostgreSQL and can be displayed in the properties table/view.
+                  </p>
+                </div>
+
+                <Field
+                  label="Amenities"
+                  value={form.amenities}
+                  onChange={(value) =>
+                    updateField(
+                      "amenities",
+                      value
+                    )
+                  }
+                  placeholder="Parking, Security, Swimming Pool"
+                  className={inputClass}
+                />
+
+                <p className="text-xs text-slate-400">
+                  Separate multiple values with
+                  commas.
+                </p>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="grid gap-5 md:grid-cols-2">
+                <SelectField
+                  label="Availability"
+                  value={form.availability}
+                  onChange={(value) =>
+                    updateField(
+                      "availability",
+                      value
+                    )
+                  }
+                  className={inputClass}
+                  options={[
+                    [
+                      "AVAILABLE",
+                      "Available",
+                    ],
+                    [
+                      "UNAVAILABLE",
+                      "Unavailable",
+                    ],
+                    [
+                      "SOLD",
+                      "Sold",
+                    ],
+                    [
+                      "RENTED",
+                      "Rented",
+                    ],
+                  ]}
+                />
+
+                <Field
+                  label="Listed Date"
+                  type="date"
+                  value={form.listedDate}
+                  onChange={(value) =>
+                    updateField(
+                      "listedDate",
+                      value
+                    )
+                  }
+                  className={inputClass}
+                />
+              </div>
+            </section>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Link
+                href="/dashboard/admin/properties"
+                className="flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700"
+              >
+                Cancel
+              </Link>
+
+              <button
+                type="submit"
+                disabled={
+                  loading ||
+                  loadingProperty ||
+                  loadingUsers ||
+                  owners.length === 0 ||
+                  agents.length === 0
                 }
-                placeholder="Parking, Security, Swimming Pool"
-                className={inputClass}
-              />
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-7 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Save className="h-4 w-4" />
 
-              <p className="text-xs text-slate-400">
-                Separate multiple values with
-                commas.
-              </p>
-
+                {loading
+                  ? isEditMode
+                    ? "Updating..."
+                    : "Saving..."
+                  : isEditMode
+                  ? "Update Property"
+                  : "Save Property"}
+              </button>
             </div>
-          </section>
-
-          {/* STATUS */}
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-            <div className="grid gap-5 md:grid-cols-2">
-
-              <SelectField
-                label="Availability"
-                value={form.availability}
-                onChange={(value) =>
-                  updateField(
-                    "availability",
-                    value
-                  )
-                }
-                className={inputClass}
-                options={[
-                  [
-                    "AVAILABLE",
-                    "Available",
-                  ],
-                  [
-                    "UNAVAILABLE",
-                    "Unavailable",
-                  ],
-                  ["SOLD", "Sold"],
-                  [
-                    "RENTED",
-                    "Rented",
-                  ],
-                ]}
-              />
-
-              <Field
-                label="Listed Date"
-                type="date"
-                value={form.listedDate}
-                onChange={(value) =>
-                  updateField(
-                    "listedDate",
-                    value
-                  )
-                }
-                className={inputClass}
-              />
-
-            </div>
-          </section>
-
-          {/* BUTTONS */}
-
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-
-            <Link
-              href="/dashboard/admin/properties"
-              className="flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700"
-            >
-              Cancel
-            </Link>
-
-            <button
-              type="submit"
-              disabled={
-                loading ||
-                loadingProperty ||
-                loadingUsers ||
-                owners.length === 0 ||
-                agents.length === 0
-              }
-              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-7 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Save className="h-4 w-4" />
-
-              {loading
-                ? isEditMode
-                  ? "Updating..."
-                  : "Saving..."
-                : isEditMode
-                ? "Update Property"
-                : "Save Property"}
-            </button>
-
-          </div>
-
           </form>
         )}
       </div>
     </DashboardLayout>
   );
 }
-
-
-
 
 function Field({
   label,
@@ -1452,10 +1341,6 @@ function Field({
   );
 }
 
-
-
-
-
 function TextAreaField({
   label,
   value,
@@ -1488,10 +1373,6 @@ function TextAreaField({
     </div>
   );
 }
-
-
-
-
 
 function SelectField({
   label,
