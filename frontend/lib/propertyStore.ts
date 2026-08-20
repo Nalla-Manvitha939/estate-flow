@@ -1,14 +1,72 @@
 import { Property } from "@/types/property";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  "https://estate-flow-bj2z.onrender.com/api/v1";
 
 function getToken(): string | null {
   if (typeof window === "undefined") {
     return null;
   }
 
-  return localStorage.getItem("access_token");
+  const directKeys = [
+    "access_token",
+    "accessToken",
+    "token",
+    "authToken",
+  ];
+
+  for (const key of directKeys) {
+    const value = localStorage.getItem(key);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  const possibleKeys = [
+    "auth",
+    "user",
+    "currentUser",
+    "authUser",
+  ];
+
+  for (const key of possibleKeys) {
+    const value = localStorage.getItem(key);
+
+    if (!value) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      if (parsed?.access_token) {
+        return parsed.access_token;
+      }
+
+      if (parsed?.accessToken) {
+        return parsed.accessToken;
+      }
+
+      if (parsed?.token) {
+        return parsed.token;
+      }
+
+      if (parsed?.user?.access_token) {
+        return parsed.user.access_token;
+      }
+
+      if (parsed?.user?.accessToken) {
+        return parsed.user.accessToken;
+      }
+
+      if (parsed?.user?.token) {
+        return parsed.user.token;
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 function getHeaders(): HeadersInit {
@@ -29,51 +87,182 @@ function getHeaders(): HeadersInit {
 function normalizeProperty(property: any): Property {
   return {
     ...property,
-    ownerId: property.ownerId ?? property.owner_id,
-    ownerName: property.ownerName ?? property.owner_name,
-    agentId: property.agentId ?? property.agent_id,
-    agentName: property.agentName ?? property.agent_name,
+
+    id: String(property.id ?? ""),
+
+    ownerId:
+      property.ownerId ??
+      property.owner_id ??
+      property.owner?.id ??
+      "",
+
+    ownerName:
+      property.ownerName ??
+      property.owner_name ??
+      property.owner?.name ??
+      "",
+
+    agentId:
+      property.agentId ??
+      property.agent_id ??
+      property.agent?.id ??
+      "",
+
+    agentName:
+      property.agentName ??
+      property.agent_name ??
+      property.agent?.name ??
+      "",
+
     propertyType:
-      property.propertyType ?? property.property_type,
+      property.propertyType ??
+      property.property_type ??
+      "",
+
     listingType:
-      property.listingType ?? property.listing_type,
-    pincode: property.pincode,
+      property.listingType ??
+      property.listing_type ??
+      "",
+
+    pincode:
+      property.pincode ?? "",
+
     listedDate:
-      property.listedDate ?? property.listed_date,
+      property.listedDate ??
+      property.listed_date ??
+      null,
+
     createdAt:
-      property.createdAt ?? property.created_at,
+      property.createdAt ??
+      property.created_at ??
+      null,
+
     updatedAt:
-      property.updatedAt ?? property.updated_at,
+      property.updatedAt ??
+      property.updated_at ??
+      null,
+
+    price:
+      Number(property.price ?? 0),
+
+    area:
+      Number(property.area ?? 0),
+
+    bedrooms:
+      Number(property.bedrooms ?? 0),
+
+    bathrooms:
+      Number(property.bathrooms ?? 0),
+
+    amenities:
+      Array.isArray(property.amenities)
+        ? property.amenities
+        : [],
+
+    images:
+      Array.isArray(property.images)
+        ? property.images
+        : [],
+
+    documents:
+      Array.isArray(property.documents)
+        ? property.documents
+        : [],
   };
 }
 
 function propertyToBackend(property: any) {
   return {
-    id: property.id,
-    owner_id: property.ownerId ?? property.owner_id,
-    owner_name: property.ownerName ?? property.owner_name ?? "",
-    agent_id: property.agentId ?? property.agent_id ?? null,
+    id: property.id || undefined,
+
+    owner_id:
+      property.ownerId ??
+      property.owner_id,
+
+    owner_name:
+      property.ownerName ??
+      property.owner_name ??
+      "",
+
+    agent_id:
+      property.agentId ??
+      property.agent_id ??
+      null,
+
     agent_name:
-      property.agentName ?? property.agent_name ?? null,
-    title: property.title,
-    description: property.description,
+      property.agentName ??
+      property.agent_name ??
+      null,
+
+    title:
+      property.title ??
+      "",
+
+    description:
+      property.description ??
+      "",
+
     property_type:
-      property.propertyType ?? property.property_type,
+      property.propertyType ??
+      property.property_type ??
+      "APARTMENT",
+
     listing_type:
-      property.listingType ?? property.listing_type,
-    price: Number(property.price),
-    location: property.location,
-    city: property.city,
-    state: property.state,
-    pincode: property.pincode ?? null,
-    bedrooms: Number(property.bedrooms ?? 0),
-    bathrooms: Number(property.bathrooms ?? 0),
-    area: Number(property.area),
-    amenities: property.amenities ?? [],
-    images: property.images ?? [],
-    documents: property.documents ?? [],
-    availability: property.availability ?? "AVAILABLE",
-    listed_date: property.listedDate ?? property.listed_date ?? null,
+      property.listingType ??
+      property.listing_type ??
+      "SALE",
+
+    price:
+      Number(property.price ?? 0),
+
+    location:
+      property.location ??
+      "",
+
+    city:
+      property.city ??
+      "",
+
+    state:
+      property.state ??
+      "",
+
+    pincode:
+      property.pincode ??
+      null,
+
+    bedrooms:
+      Number(property.bedrooms ?? 0),
+
+    bathrooms:
+      Number(property.bathrooms ?? 0),
+
+    area:
+      Number(property.area ?? 0),
+
+    amenities:
+      Array.isArray(property.amenities)
+        ? property.amenities
+        : [],
+
+    images:
+      Array.isArray(property.images)
+        ? property.images
+        : [],
+
+    documents:
+      Array.isArray(property.documents)
+        ? property.documents
+        : [],
+
+    availability:
+      property.availability ??
+      "AVAILABLE",
+
+    listed_date:
+      property.listedDate ??
+      property.listed_date ??
+      null,
   };
 }
 
@@ -87,61 +276,93 @@ function dispatchPropertyUpdate(): void {
   );
 }
 
-export async function getProperties(): Promise<Property[]> {
+async function getErrorMessage(
+  response: Response,
+  fallback: string
+): Promise<string> {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/properties?skip=0&limit=100`,
-      {
-        method: "GET",
-        headers: getHeaders(),
-        cache: "no-store",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch properties: ${response.status}`
-      );
-    }
-
     const data = await response.json();
 
-    if (!Array.isArray(data)) {
-      return [];
+    if (typeof data?.detail === "string") {
+      return data.detail;
     }
 
-    return data.map(normalizeProperty);
-  } catch (error) {
-    console.error("Failed to load properties:", error);
-    return [];
+    if (Array.isArray(data?.detail)) {
+      return data.detail
+        .map((item: any) => item?.msg)
+        .filter(Boolean)
+        .join(", ");
+    }
+
+    if (typeof data?.message === "string") {
+      return data.message;
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
   }
+}
+
+export async function getProperties(): Promise<Property[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/properties?skip=0&limit=100`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    const message = await getErrorMessage(
+      response,
+      `Failed to fetch properties: ${response.status}`
+    );
+
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+
+  if (Array.isArray(data)) {
+    return data.map(normalizeProperty);
+  }
+
+  if (Array.isArray(data?.items)) {
+    return data.items.map(normalizeProperty);
+  }
+
+  if (Array.isArray(data?.properties)) {
+    return data.properties.map(normalizeProperty);
+  }
+
+  return [];
 }
 
 export async function saveProperties(
   properties: Property[]
 ): Promise<void> {
-  if (typeof window === "undefined") {
-    return;
-  }
+  const existingProperties =
+    await getProperties();
 
-  try {
-    const existingProperties = await getProperties();
+  const existingIds = new Set(
+    existingProperties.map(
+      (property) => String(property.id)
+    )
+  );
 
-    const existingIds = new Set(
-      existingProperties.map((property) => property.id)
-    );
-
-    for (const property of properties) {
-      if (!existingIds.has(property.id)) {
-        await addProperty(property);
-      }
+  for (const property of properties) {
+    if (
+      !existingIds.has(
+        String(property.id)
+      )
+    ) {
+      await addProperty(property);
     }
-
-    dispatchPropertyUpdate();
-  } catch (error) {
-    console.error("Failed to save properties:", error);
-    throw error;
   }
+
+  dispatchPropertyUpdate();
 }
 
 export async function addProperty(
@@ -159,20 +380,10 @@ export async function addProperty(
   );
 
   if (!response.ok) {
-    let message = "Failed to add property";
-
-    try {
-      const errorData = await response.json();
-
-      if (errorData?.detail) {
-        message =
-          typeof errorData.detail === "string"
-            ? errorData.detail
-            : JSON.stringify(errorData.detail);
-      }
-    } catch {
-      //
-    }
+    const message = await getErrorMessage(
+      response,
+      "Failed to add property."
+    );
 
     throw new Error(message);
   }
@@ -188,9 +399,15 @@ export async function updateProperty(
   propertyId: string,
   updates: Partial<Property>
 ): Promise<Property | undefined> {
-  const backendUpdates: Record<string, any> = {};
+  const backendUpdates: Record<
+    string,
+    any
+  > = {};
 
-  const mapping: Record<string, string> = {
+  const mapping: Record<
+    string,
+    string
+  > = {
     ownerId: "owner_id",
     ownerName: "owner_name",
     agentId: "agent_id",
@@ -202,9 +419,49 @@ export async function updateProperty(
 
   Object.entries(updates).forEach(
     ([key, value]) => {
-      backendUpdates[mapping[key] ?? key] = value;
+      const backendKey =
+        mapping[key] ?? key;
+
+      backendUpdates[backendKey] =
+        value;
     }
   );
+
+  if (
+    backendUpdates.price !==
+    undefined
+  ) {
+    backendUpdates.price = Number(
+      backendUpdates.price
+    );
+  }
+
+  if (
+    backendUpdates.area !==
+    undefined
+  ) {
+    backendUpdates.area = Number(
+      backendUpdates.area
+    );
+  }
+
+  if (
+    backendUpdates.bedrooms !==
+    undefined
+  ) {
+    backendUpdates.bedrooms = Number(
+      backendUpdates.bedrooms
+    );
+  }
+
+  if (
+    backendUpdates.bathrooms !==
+    undefined
+  ) {
+    backendUpdates.bathrooms = Number(
+      backendUpdates.bathrooms
+    );
+  }
 
   const response = await fetch(
     `${API_BASE_URL}/properties/${encodeURIComponent(
@@ -213,25 +470,17 @@ export async function updateProperty(
     {
       method: "PUT",
       headers: getHeaders(),
-      body: JSON.stringify(backendUpdates),
+      body: JSON.stringify(
+        backendUpdates
+      ),
     }
   );
 
   if (!response.ok) {
-    let message = "Failed to update property";
-
-    try {
-      const errorData = await response.json();
-
-      if (errorData?.detail) {
-        message =
-          typeof errorData.detail === "string"
-            ? errorData.detail
-            : JSON.stringify(errorData.detail);
-      }
-    } catch {
-      //
-    }
+    const message = await getErrorMessage(
+      response,
+      "Failed to update property."
+    );
 
     throw new Error(message);
   }
@@ -257,20 +506,10 @@ export async function deleteProperty(
   );
 
   if (!response.ok) {
-    let message = "Failed to delete property";
-
-    try {
-      const errorData = await response.json();
-
-      if (errorData?.detail) {
-        message =
-          typeof errorData.detail === "string"
-            ? errorData.detail
-            : JSON.stringify(errorData.detail);
-      }
-    } catch {
-      //
-    }
+    const message = await getErrorMessage(
+      response,
+      "Failed to delete property."
+    );
 
     throw new Error(message);
   }
@@ -281,114 +520,123 @@ export async function deleteProperty(
 export async function getPropertyById(
   propertyId: string
 ): Promise<Property | null> {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/properties/${encodeURIComponent(
-        propertyId
-      )}`,
-      {
-        method: "GET",
-        headers: getHeaders(),
-        cache: "no-store",
-      }
-    );
-
-    if (response.status === 404) {
-      return null;
+  const response = await fetch(
+    `${API_BASE_URL}/properties/${encodeURIComponent(
+      propertyId
+    )}`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+      cache: "no-store",
     }
+  );
 
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch property: ${response.status}`
-      );
-    }
-
-    const data = await response.json();
-
-    return normalizeProperty(data);
-  } catch (error) {
-    console.error(
-      "Failed to load property:",
-      error
-    );
-
+  if (response.status === 404) {
     return null;
   }
+
+  if (!response.ok) {
+    const message = await getErrorMessage(
+      response,
+      `Failed to fetch property: ${response.status}`
+    );
+
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+
+  return normalizeProperty(data);
 }
 
 export async function getPropertiesByOwner(
   ownerId: string
 ): Promise<Property[]> {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/properties/my-properties?skip=0&limit=100`,
-      {
-        method: "GET",
-        headers: getHeaders(),
-        cache: "no-store",
-      }
+  const response = await fetch(
+    `${API_BASE_URL}/properties/my-properties?skip=0&limit=100`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    const message = await getErrorMessage(
+      response,
+      `Failed to fetch owner properties: ${response.status}`
     );
 
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch owner properties: ${response.status}`
-      );
-    }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data)) {
-      return [];
-    }
-
-    return data
-      .map(normalizeProperty)
-      .filter(
-        (property) =>
-          String(property.ownerId) === String(ownerId)
-      );
-  } catch (error) {
-    console.error(
-      "Failed to load owner properties:",
-      error
-    );
-
-    return [];
+    throw new Error(message);
   }
-}
 
-export async function getActiveProperties(): Promise<Property[]> {
-  const properties = await getProperties();
+  const data = await response.json();
 
-  return properties.filter((property) => {
-    const status = String(
-      property.status ?? ""
-    ).toUpperCase();
+  let properties: Property[] = [];
 
-    const availability = String(
-      property.availability ?? ""
-    ).toUpperCase();
-
-    return (
-      status === "ACTIVE" ||
-      status === "AVAILABLE" ||
-      availability === "AVAILABLE"
-    );
-  });
-}
-
-export async function getSoldProperties(): Promise<Property[]> {
-  const properties = await getProperties();
+  if (Array.isArray(data)) {
+    properties =
+      data.map(normalizeProperty);
+  } else if (
+    Array.isArray(data?.items)
+  ) {
+    properties =
+      data.items.map(normalizeProperty);
+  } else if (
+    Array.isArray(data?.properties)
+  ) {
+    properties =
+      data.properties.map(
+        normalizeProperty
+      );
+  }
 
   return properties.filter(
     (property) =>
-      String(property.status ?? "").toUpperCase() ===
-      "SOLD"
+      String(property.ownerId) ===
+      String(ownerId)
+  );
+}
+
+export async function getActiveProperties(): Promise<Property[]> {
+  const properties =
+    await getProperties();
+
+  return properties.filter(
+    (property) => {
+      const status = String(
+        property.status ?? ""
+      ).toUpperCase();
+
+      const availability =
+        String(
+          property.availability ?? ""
+        ).toUpperCase();
+
+      return (
+        status === "ACTIVE" ||
+        status === "AVAILABLE" ||
+        availability === "AVAILABLE"
+      );
+    }
+  );
+}
+
+export async function getSoldProperties(): Promise<Property[]> {
+  const properties =
+    await getProperties();
+
+  return properties.filter(
+    (property) =>
+      String(
+        property.status ?? ""
+      ).toUpperCase() === "SOLD"
   );
 }
 
 export async function getRentedProperties(): Promise<Property[]> {
-  const properties = await getProperties();
+  const properties =
+    await getProperties();
 
   return properties.filter(
     (property) =>
@@ -405,75 +653,80 @@ export async function getRentedProperties(): Promise<Property[]> {
 }
 
 export async function getAvailableProperties(): Promise<Property[]> {
-  const properties = await getProperties();
+  const properties =
+    await getProperties();
 
   return properties.filter(
     (property) =>
       String(
         property.availability ?? ""
-      ).toUpperCase() === "AVAILABLE" &&
+      ).toUpperCase() ===
+        "AVAILABLE" &&
       (
         String(
           property.status ?? ""
-        ).toUpperCase() === "ACTIVE" ||
+        ).toUpperCase() ===
+          "ACTIVE" ||
         String(
           property.status ?? ""
-        ).toUpperCase() === "AVAILABLE"
+        ).toUpperCase() ===
+          "AVAILABLE"
       )
   );
 }
 
 export async function getInactiveProperties(): Promise<Property[]> {
-  const properties = await getProperties();
+  const properties =
+    await getProperties();
 
   return properties.filter(
     (property) =>
-      String(property.status ?? "").toUpperCase() ===
+      String(
+        property.status ?? ""
+      ).toUpperCase() ===
       "INACTIVE"
   );
 }
 
 export async function getPropertyCount(): Promise<number> {
-  const properties = await getProperties();
+  const properties =
+    await getProperties();
 
   return properties.length;
 }
 
 export async function getActivePropertyCount(): Promise<number> {
-  const properties = await getActiveProperties();
+  const properties =
+    await getActiveProperties();
 
   return properties.length;
 }
 
 export async function getSoldPropertyCount(): Promise<number> {
-  const properties = await getSoldProperties();
+  const properties =
+    await getSoldProperties();
 
   return properties.length;
 }
 
 export async function getRentedPropertyCount(): Promise<number> {
-  const properties = await getRentedProperties();
+  const properties =
+    await getRentedProperties();
 
   return properties.length;
 }
 
 export async function clearProperties(): Promise<void> {
-  try {
-    const properties = await getProperties();
+  const properties =
+    await getProperties();
 
-    await Promise.all(
-      properties.map((property) =>
-        deleteProperty(property.id)
+  await Promise.all(
+    properties.map((property) =>
+      deleteProperty(
+        String(property.id)
       )
-    );
+    )
+  );
 
-    dispatchPropertyUpdate();
-  } catch (error) {
-    console.error(
-      "Failed to clear properties:",
-      error
-    );
-
-    throw error;
-  }
+  dispatchPropertyUpdate();
 }
