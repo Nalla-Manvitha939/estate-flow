@@ -30,8 +30,90 @@ type StoredUser = {
   role?: string;
 };
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = "https://estate-flow-bj2z.onrender.com/api/v1";
+
+function getAccessToken() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const directToken =
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("authToken");
+
+  if (directToken) {
+    return directToken;
+  }
+
+  const possibleKeys = [
+    "auth",
+    "user",
+    "currentUser",
+    "authUser",
+  ];
+
+  for (const key of possibleKeys) {
+    const value = localStorage.getItem(key);
+
+    if (!value) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      if (parsed?.access_token) {
+        return parsed.access_token;
+      }
+
+      if (parsed?.accessToken) {
+        return parsed.accessToken;
+      }
+
+      if (parsed?.token) {
+        return parsed.token;
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+function extractList<T>(data: unknown): T[] {
+  if (Array.isArray(data)) {
+    return data as T[];
+  }
+
+  if (!data || typeof data !== "object") {
+    return [];
+  }
+
+  const objectData = data as Record<string, unknown>;
+
+  if (Array.isArray(objectData.items)) {
+    return objectData.items as T[];
+  }
+
+  if (Array.isArray(objectData.data)) {
+    return objectData.data as T[];
+  }
+
+  if (Array.isArray(objectData.results)) {
+    return objectData.results as T[];
+  }
+
+  if (Array.isArray(objectData.properties)) {
+    return objectData.properties as T[];
+  }
+
+  if (Array.isArray(objectData.users)) {
+    return objectData.users as T[];
+  }
+
+  return [];
+}
 
 export default function AdminDashboard() {
   const [totalProperties, setTotalProperties] = useState(0);
@@ -45,50 +127,83 @@ export default function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
+      const token = getAccessToken();
+
+      const headers: HeadersInit = {
+        Accept: "application/json",
+      };
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const [
         propertiesResponse,
         ownersResponse,
         agentsResponse,
         customersResponse,
+        enquiriesResponse,
       ] = await Promise.all([
-        fetch(`${API_BASE_URL}/properties?skip=0&limit=100`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-          cache: "no-store",
-        }),
-        fetch(`${API_BASE_URL}/users?role=owner&skip=0&limit=100`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-          cache: "no-store",
-        }),
-        fetch(`${API_BASE_URL}/users?role=agent&skip=0&limit=100`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-          cache: "no-store",
-        }),
-        fetch(`${API_BASE_URL}/users?role=customer&skip=0&limit=100`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-          cache: "no-store",
-        }),
+        fetch(
+          `${API_BASE_URL}/properties?skip=0&limit=1000`,
+          {
+            method: "GET",
+            headers,
+            cache: "no-store",
+          }
+        ),
+
+        fetch(
+          `${API_BASE_URL}/users?role=owner&skip=0&limit=1000`,
+          {
+            method: "GET",
+            headers,
+            cache: "no-store",
+          }
+        ),
+
+        fetch(
+          `${API_BASE_URL}/users?role=agent&skip=0&limit=1000`,
+          {
+            method: "GET",
+            headers,
+            cache: "no-store",
+          }
+        ),
+
+        fetch(
+          `${API_BASE_URL}/users?role=customer&skip=0&limit=1000`,
+          {
+            method: "GET",
+            headers,
+            cache: "no-store",
+          }
+        ),
+
+        fetch(
+          `${API_BASE_URL}/enquiries?skip=0&limit=1000`,
+          {
+            method: "GET",
+            headers,
+            cache: "no-store",
+          }
+        ),
       ]);
 
       if (propertiesResponse.ok) {
-        const properties: Property[] = await propertiesResponse.json();
+        const propertiesData = await propertiesResponse.json();
+
+        const properties =
+          extractList<Property>(propertiesData);
 
         setTotalProperties(properties.length);
 
         setActiveProperties(
           properties.filter((property) => {
-            const status = String(property.status || "").toUpperCase();
+            const status = String(
+              property.status || ""
+            ).toUpperCase();
+
             const availability = String(
               property.availability || ""
             ).toUpperCase();
@@ -102,17 +217,37 @@ export default function AdminDashboard() {
         );
 
         setSoldProperties(
-          properties.filter(
-            (property) =>
-              String(property.status || "").toUpperCase() === "SOLD"
-          ).length
+          properties.filter((property) => {
+            const status = String(
+              property.status || ""
+            ).toUpperCase();
+
+            const availability = String(
+              property.availability || ""
+            ).toUpperCase();
+
+            return (
+              status === "SOLD" ||
+              availability === "SOLD"
+            );
+          }).length
         );
 
         setRentedProperties(
-          properties.filter(
-            (property) =>
-              String(property.status || "").toUpperCase() === "RENTED"
-          ).length
+          properties.filter((property) => {
+            const status = String(
+              property.status || ""
+            ).toUpperCase();
+
+            const availability = String(
+              property.availability || ""
+            ).toUpperCase();
+
+            return (
+              status === "RENTED" ||
+              availability === "RENTED"
+            );
+          }).length
         );
       } else {
         setTotalProperties(0);
@@ -122,28 +257,54 @@ export default function AdminDashboard() {
       }
 
       if (ownersResponse.ok) {
-        const owners: StoredUser[] = await ownersResponse.json();
+        const ownersData = await ownersResponse.json();
+
+        const owners =
+          extractList<StoredUser>(ownersData);
+
         setTotalOwners(owners.length);
       } else {
         setTotalOwners(0);
       }
 
       if (agentsResponse.ok) {
-        const agents: StoredUser[] = await agentsResponse.json();
+        const agentsData = await agentsResponse.json();
+
+        const agents =
+          extractList<StoredUser>(agentsData);
+
         setTotalAgents(agents.length);
       } else {
         setTotalAgents(0);
       }
 
       if (customersResponse.ok) {
-        const customers: StoredUser[] = await customersResponse.json();
+        const customersData =
+          await customersResponse.json();
+
+        const customers =
+          extractList<StoredUser>(customersData);
+
         setTotalCustomers(customers.length);
       } else {
         setTotalCustomers(0);
       }
 
-      const enquiries = getEnquiries();
-      setTotalEnquiries(enquiries.length);
+      if (enquiriesResponse.ok) {
+        const enquiriesData =
+          await enquiriesResponse.json();
+
+        const enquiries =
+          extractList(enquiriesData);
+
+        setTotalEnquiries(enquiries.length);
+      } else {
+        const localEnquiries = getEnquiries();
+
+        setTotalEnquiries(
+          localEnquiries.length
+        );
+      }
     } catch {
       setTotalProperties(0);
       setActiveProperties(0);
@@ -153,48 +314,78 @@ export default function AdminDashboard() {
       setTotalAgents(0);
       setTotalCustomers(0);
 
-      const enquiries = getEnquiries();
-      setTotalEnquiries(enquiries.length);
+      const localEnquiries = getEnquiries();
+
+      setTotalEnquiries(
+        localEnquiries.length
+      );
     }
   };
 
   useEffect(() => {
     loadDashboardData();
 
+    const handlePropertiesUpdated = () => {
+      loadDashboardData();
+    };
+
+    const handleEnquiriesUpdated = () => {
+      loadDashboardData();
+    };
+
+    const handleUsersUpdated = () => {
+      loadDashboardData();
+    };
+
     window.addEventListener(
       "estateflow-properties-updated",
-      loadDashboardData
+      handlePropertiesUpdated
     );
 
     window.addEventListener(
       "estateflow-enquiries-updated",
-      loadDashboardData
+      handleEnquiriesUpdated
     );
 
     window.addEventListener(
       "estateflow-users-updated",
+      handleUsersUpdated
+    );
+
+    window.addEventListener(
+      "storage",
       loadDashboardData
     );
 
-    window.addEventListener("storage", loadDashboardData);
+    const interval = window.setInterval(
+      () => {
+        loadDashboardData();
+      },
+      30000
+    );
 
     return () => {
       window.removeEventListener(
         "estateflow-properties-updated",
-        loadDashboardData
+        handlePropertiesUpdated
       );
 
       window.removeEventListener(
         "estateflow-enquiries-updated",
-        loadDashboardData
+        handleEnquiriesUpdated
       );
 
       window.removeEventListener(
         "estateflow-users-updated",
+        handleUsersUpdated
+      );
+
+      window.removeEventListener(
+        "storage",
         loadDashboardData
       );
 
-      window.removeEventListener("storage", loadDashboardData);
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -328,8 +519,7 @@ export default function AdminDashboard() {
               </h3>
 
               <p className="mt-1 text-sm text-slate-400">
-                Analytics will populate automatically once the platform modules
-                start receiving real data.
+                Live platform statistics are connected to the EstateFlow API.
               </p>
             </div>
           </div>
@@ -338,11 +528,11 @@ export default function AdminDashboard() {
             <BarChart3 className="mx-auto h-8 w-8 text-slate-300" />
 
             <p className="mt-4 text-sm font-semibold text-slate-600">
-              Analytics data is not available yet
+              Live dashboard statistics enabled
             </p>
 
             <p className="mt-1 text-sm text-slate-400">
-              Connect the dashboard API to display live platform statistics.
+              Dashboard values are refreshed automatically from the backend.
             </p>
           </div>
         </section>
@@ -368,11 +558,17 @@ function Metric({
         <Icon className="h-5 w-5" />
       </div>
 
-      <p className="mt-5 text-sm font-medium text-slate-500">{title}</p>
+      <p className="mt-5 text-sm font-medium text-slate-500">
+        {title}
+      </p>
 
-      <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
+      <p className="mt-1 text-3xl font-bold text-slate-900">
+        {value}
+      </p>
 
-      <p className="mt-1 text-xs text-slate-400">{description}</p>
+      <p className="mt-1 text-xs text-slate-400">
+        {description}
+      </p>
     </div>
   );
 }
@@ -394,15 +590,20 @@ function AdminPanel({
     <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <Icon className="h-6 w-6 text-blue-600" />
 
-      <h3 className="mt-5 text-lg font-semibold text-slate-900">{title}</h3>
+      <h3 className="mt-5 text-lg font-semibold text-slate-900">
+        {title}
+      </h3>
 
-      <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        {description}
+      </p>
 
       <Link
         href={href}
         className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600"
       >
         {action}
+
         <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
