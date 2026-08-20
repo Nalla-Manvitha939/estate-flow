@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.database import Base, engine
+
 from app.api.v1.auth import router as auth_router
 from app.api.v1.properties import router as property_router
 from app.api.v1.endpoints.users import router as users_router
+
+Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
