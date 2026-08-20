@@ -24,9 +24,9 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // =========================================================
-  // GET RESET TOKEN FROM URL
-  // =========================================================
+  
+   
+  
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -39,9 +39,7 @@ export default function ResetPasswordPage() {
     }
   }, []);
 
-  // =========================================================
-  // RESET PASSWORD
-  // =========================================================
+  
 
   const handleResetPassword = async (
     e: FormEvent<HTMLFormElement>
