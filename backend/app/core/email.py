@@ -1,30 +1,22 @@
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+
+import resend
 
 
 def send_password_reset_email(
     recipient_email: str,
     reset_link: str,
 ):
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_username = os.getenv("SMTP_USERNAME")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    smtp_from = os.getenv("SMTP_FROM")
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    resend_from = os.getenv("RESEND_FROM")
 
-    if not smtp_username or not smtp_password or not smtp_from:
+    if not resend_api_key or not resend_from:
         raise RuntimeError(
-            "SMTP configuration is missing. "
-            "Check SMTP_USERNAME, SMTP_PASSWORD and SMTP_FROM in .env"
+            "Resend configuration is missing. "
+            "Check RESEND_API_KEY and RESEND_FROM."
         )
 
-    message = MIMEMultipart("alternative")
-
-    message["Subject"] = "EstateFlow - Reset Your Password"
-    message["From"] = smtp_from
-    message["To"] = recipient_email
+    resend.api_key = resend_api_key
 
     html_content = f"""
 <!DOCTYPE html>
@@ -120,26 +112,19 @@ def send_password_reset_email(
 </html>
 """
 
-    message.attach(
-        MIMEText(html_content, "html")
-    )
-
     try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
+        result = resend.Emails.send(
+            {
+                "from": resend_from,
+                "to": [recipient_email],
+                "subject": "EstateFlow - Reset Your Password",
+                "html": html_content,
+            }
+        )
 
-            server.login(
-                smtp_username,
-                smtp_password,
-            )
+        return result
 
-            server.sendmail(
-                smtp_from,
-                recipient_email,
-                message.as_string(),
-            )
-
-    except smtplib.SMTPException as exc:
+    except Exception as exc:
         raise RuntimeError(
             f"Failed to send password reset email: {exc}"
         ) from exc
