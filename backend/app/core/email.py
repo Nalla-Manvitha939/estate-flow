@@ -1,57 +1,27 @@
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import requests
 
 
 def send_password_reset_email(
     recipient_email: str,
     reset_link: str,
 ):
-    smtp_host = os.getenv(
-        "SMTP_HOST",
-        "smtp-relay.brevo.com",
+    brevo_api_key = os.getenv("BREVO_API_KEY")
+    brevo_from_email = os.getenv("SMTP_FROM")
+    brevo_from_name = os.getenv(
+        "SMTP_FROM_NAME",
+        "EstateFlow",
     )
 
-    smtp_port = int(
-        os.getenv("SMTP_PORT", "587")
-    )
-
-    smtp_username = os.getenv(
-        "SMTP_USERNAME"
-    )
-
-    smtp_password = os.getenv(
-        "SMTP_PASSWORD"
-    )
-
-    smtp_from = os.getenv(
-        "SMTP_FROM"
-    )
-
-    if not smtp_username:
+    if not brevo_api_key:
         raise RuntimeError(
-            "SMTP_USERNAME is missing."
+            "BREVO_API_KEY is missing."
         )
 
-    if not smtp_password:
-        raise RuntimeError(
-            "SMTP_PASSWORD is missing."
-        )
-
-    if not smtp_from:
+    if not brevo_from_email:
         raise RuntimeError(
             "SMTP_FROM is missing."
         )
-
-    message = MIMEMultipart("alternative")
-
-    message["Subject"] = (
-        "EstateFlow - Reset Your Password"
-    )
-
-    message["From"] = smtp_from
-    message["To"] = recipient_email
 
     html_content = f"""
 <!DOCTYPE html>
@@ -166,57 +136,54 @@ def send_password_reset_email(
 </html>
 """
 
-    message.attach(
-        MIMEText(
-            html_content,
-            "html",
-            "utf-8",
-        )
-    )
+    payload = {
+        "sender": {
+            "name": brevo_from_name,
+            "email": brevo_from_email,
+        },
+        "to": [
+            {
+                "email": recipient_email,
+            }
+        ],
+        "subject": "EstateFlow - Reset Your Password",
+        "htmlContent": html_content,
+    }
+
+    headers = {
+        "accept": "application/json",
+        "api-key": brevo_api_key,
+        "content-type": "application/json",
+    }
 
     try:
-        with smtplib.SMTP(
-            smtp_host,
-            smtp_port,
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers=headers,
+            json=payload,
             timeout=30,
-        ) as server:
+        )
 
-            server.ehlo()
+        if not response.ok:
+            try:
+                error_data = response.json()
+                error_message = (
+                    error_data.get("message")
+                    or error_data.get("code")
+                    or response.text
+                )
+            except Exception:
+                error_message = response.text
 
-            server.starttls()
-
-            server.ehlo()
-
-            server.login(
-                smtp_username,
-                smtp_password,
+            raise RuntimeError(
+                f"Brevo email API failed "
+                f"({response.status_code}): "
+                f"{error_message}"
             )
 
-            server.sendmail(
-                smtp_from,
-                [recipient_email],
-                message.as_string(),
-            )
+        return response.json()
 
-    except smtplib.SMTPAuthenticationError as exc:
+    except requests.RequestException as exc:
         raise RuntimeError(
-            "SMTP authentication failed. "
-            "Check SMTP_USERNAME and "
-            "SMTP_PASSWORD."
-        ) from exc
-
-    except smtplib.SMTPConnectError as exc:
-        raise RuntimeError(
-            "Unable to connect to the SMTP server. "
-            "Check SMTP_HOST and SMTP_PORT."
-        ) from exc
-
-    except smtplib.SMTPException as exc:
-        raise RuntimeError(
-            f"Failed to send password reset email: {exc}"
-        ) from exc
-
-    except OSError as exc:
-        raise RuntimeError(
-            f"SMTP network connection failed: {exc}"
+            f"Failed to connect to Brevo email API: {exc}"
         ) from exc
